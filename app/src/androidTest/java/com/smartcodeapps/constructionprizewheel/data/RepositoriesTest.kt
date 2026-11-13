@@ -66,8 +66,8 @@ class RepositoriesTest {
 
     @Test
     fun invalidConfigurationIsRejectedAndNothingIsSaved() = runBlocking {
-        val result = prizes.saveAll(listOf(prize("A", 60), prize("B", 30, order = 1)))
-        assertEquals(SaveResult.Invalid(listOf(ConfigError.ProbabilityTotalInvalid(90))), result)
+        val result = prizes.saveAll(listOf(prize("A", 60), prize("B", 50, order = 1)))
+        assertEquals(SaveResult.Invalid(listOf(ConfigError.ProbabilityTotalOver100(110))), result)
         assertTrue(prizes.observePrizes().first().isEmpty())
     }
 

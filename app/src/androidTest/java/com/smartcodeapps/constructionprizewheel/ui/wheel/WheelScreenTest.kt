@@ -41,11 +41,19 @@ class WheelScreenTest {
     }
 
     @Test
-    fun spinButtonIsDisabledAndMessageShownWithNoActivePrizes() {
-        show(WheelUiState(loaded = true, segments = emptyList()))
+    fun spinButtonIsEnabledWhenEverySlotIsABust() {
+        var spins = 0
+        show(WheelUiState(loaded = true, segments = List(8) { WheelSegment.Bust }), onSpin = { spins++ })
+
+        composeRule.onNodeWithTag(WheelTestTags.SPIN_BUTTON).assertIsEnabled().performClick()
+        assertEquals(1, spins)
+    }
+
+    @Test
+    fun spinButtonIsDisabledWhileSpinning() {
+        show(WheelUiState(loaded = true, segments = segments(8), spinning = true))
 
         composeRule.onNodeWithTag(WheelTestTags.SPIN_BUTTON).assertIsNotEnabled()
-        composeRule.onNodeWithTag(WheelTestTags.NO_PRIZES_MESSAGE).assertIsDisplayed()
     }
 
     @Test
@@ -111,9 +119,9 @@ class WheelScreenTest {
     }
 
     @Test
-    fun noMessageIsShownBeforeDataLoads() {
+    fun spinButtonIsDisabledBeforeDataLoads() {
         show(WheelUiState(loaded = false))
 
-        composeRule.onNodeWithTag(WheelTestTags.NO_PRIZES_MESSAGE).assertDoesNotExist()
+        composeRule.onNodeWithTag(WheelTestTags.SPIN_BUTTON).assertIsNotEnabled()
     }
 }

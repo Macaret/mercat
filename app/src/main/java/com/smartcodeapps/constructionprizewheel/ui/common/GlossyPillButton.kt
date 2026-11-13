@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -58,6 +59,15 @@ val BluePill = PillPalette(
     rimBottom = Color(0xFF0B3C94),
 )
 
+val GreenPill = PillPalette(
+    top = Color(0xFF2FBF4A),
+    bottom = Color(0xFF128A2A),
+    pressedTop = Color(0xFF26A23E),
+    pressedBottom = Color(0xFF0C6E20),
+    rimTop = Color(0xFF7CE38C),
+    rimBottom = Color(0xFF0A5A1A),
+)
+
 val NavyPill = PillPalette(
     top = Color(0xFF3A5478),
     bottom = Color(0xFF24395A),
@@ -79,6 +89,8 @@ fun GlossyPillButton(
     enabled: Boolean = true,
     palette: PillPalette = RedPill,
     textSize: TextUnit = 22.sp,
+    /** Position of a light streak sweeping over the button (fraction of its width), or [SHINE_OFF]. */
+    shine: (() -> Float)? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -117,6 +129,29 @@ fun GlossyPillButton(
                     ),
                 ),
         )
+        if (shine != null) {
+            // Already inside the pill's clip, so the streak never leaks outside the button.
+            Box(
+                modifier = Modifier.matchParentSize().drawBehind {
+                    val p = shine()
+                    if (p != SHINE_OFF) {
+                        val x = size.width * p
+                        val band = size.width * 0.18f
+                        drawRect(
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.White.copy(alpha = 0.45f),
+                                    Color.Transparent,
+                                ),
+                                start = Offset(x - band, 0f),
+                                end = Offset(x + band, size.height),
+                            ),
+                        )
+                    }
+                },
+            )
+        }
         Text(
             text = text,
             color = Color.White,

@@ -13,32 +13,28 @@ class WheelUiStateTest {
         Prize(id, "Prize $id", null, "/img/$id.jpg", 0, active, if (active) order else null)
 
     @Test
-    fun `initial state cannot spin and shows no message`() {
-        val state = WheelUiState()
-        assertFalse(state.canSpin)
-        assertFalse(state.showNoPrizesMessage)
+    fun `initial state cannot spin`() {
+        assertFalse(WheelUiState().canSpin)
     }
 
     @Test
-    fun `segments are the active prizes in wheel order`() {
+    fun `segments are always eight with active prizes spread in wheel order and busts between`() {
         val prizes = listOf(prize(1, order = 3), prize(2, active = false), prize(3, order = 1), prize(4, order = 2))
         val state = buildWheelUiState(prizes, Branding())
-        assertEquals(listOf(3L, 4L, 1L), state.segments.map { it.prizeId })
+        assertEquals(listOf(3L, null, 4L, null, null, 1L, null, null), state.segments.map { it.prizeId })
+        assertEquals(5, state.segments.count { it.isBust })
     }
 
     @Test
     fun `wheel with active prizes can spin`() {
-        val state = buildWheelUiState(listOf(prize(1)), Branding())
-        assertTrue(state.canSpin)
-        assertFalse(state.showNoPrizesMessage)
+        assertTrue(buildWheelUiState(listOf(prize(1)), Branding()).canSpin)
     }
 
     @Test
-    fun `no active prizes disables spin and shows the message`() {
+    fun `no active prizes gives eight bust segments and can still spin`() {
         val state = buildWheelUiState(listOf(prize(1, active = false)), Branding())
-        assertTrue(state.segments.isEmpty())
-        assertFalse(state.canSpin)
-        assertTrue(state.showNoPrizesMessage)
+        assertEquals(List(8) { WheelSegment.Bust }, state.segments)
+        assertTrue(state.canSpin)
     }
 
     @Test

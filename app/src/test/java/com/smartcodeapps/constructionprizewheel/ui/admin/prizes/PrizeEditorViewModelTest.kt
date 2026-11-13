@@ -137,7 +137,7 @@ class PrizeEditorViewModelTest {
 
     @Test
     fun `invalid save keeps the draft dirty and exposes every error`() = runTest {
-        val errors = listOf(ConfigError.ProbabilityTotalInvalid(60), ConfigError.ActiveMissingImage(1))
+        val errors = listOf(ConfigError.ProbabilityTotalOver100(160), ConfigError.ActiveMissingImage(1))
         coEvery { repository.saveAll(any()) } returns SaveResult.Invalid(errors)
 
         val vm = viewModel()
@@ -153,7 +153,7 @@ class PrizeEditorViewModelTest {
 
     @Test
     fun `the next edit clears the previous save errors`() = runTest {
-        coEvery { repository.saveAll(any()) } returns SaveResult.Invalid(listOf(ConfigError.ProbabilityTotalInvalid(60)))
+        coEvery { repository.saveAll(any()) } returns SaveResult.Invalid(listOf(ConfigError.ProbabilityTotalOver100(160)))
         val vm = viewModel()
         vm.deletePrize(2)
         vm.save()
@@ -165,7 +165,7 @@ class PrizeEditorViewModelTest {
 
     @Test
     fun `discard clears save errors`() = runTest {
-        coEvery { repository.saveAll(any()) } returns SaveResult.Invalid(listOf(ConfigError.ProbabilityTotalInvalid(60)))
+        coEvery { repository.saveAll(any()) } returns SaveResult.Invalid(listOf(ConfigError.ProbabilityTotalOver100(160)))
         val vm = viewModel()
         vm.deletePrize(2)
         vm.save()
@@ -255,7 +255,7 @@ class PrizeEditorViewModelTest {
 
     @Test
     fun `rearranging clears earlier save errors`() = runTest {
-        coEvery { repository.saveAll(any()) } returns SaveResult.Invalid(listOf(ConfigError.ProbabilityTotalInvalid(60)))
+        coEvery { repository.saveAll(any()) } returns SaveResult.Invalid(listOf(ConfigError.ProbabilityTotalOver100(160)))
         val vm = viewModel()
         vm.deletePrize(2)
         vm.save()
@@ -268,5 +268,100 @@ class PrizeEditorViewModelTest {
         val uri = mockk<Uri>()
         coEvery { imageStore.savePrizeImage(uri) } returns "/img/picked.jpg"
         assertEquals("/img/picked.jpg", viewModel().importImage(uri))
+    }
+
+    @Test
+    fun `setting a probability changes only that prize and marks the draft dirty`() {
+        val vm = viewModel()
+        vm.setProbability(1, 30)
+
+        val state = vm.uiState.value
+        val hammer = state.prizes.first { it.id == 1L }
+        assertEquals(30, hammer.probability)
+        assertEquals("Hammer", hammer.name)
+        assertTrue(hammer.active)
+        assertEquals(1, hammer.wheelOrder)
+        assertEquals(40, state.prizes.first { it.id == 2L }.probability)
+        assertEquals(70, state.activeProbabilityTotal)
+        assertEquals(30, state.bustProbability)
+        assertTrue(state.dirty)
+    }
+
+    @Test
+    fun `setting the same probability keeps the draft clean`() {
+        val vm = viewModel()
+        vm.setProbability(1, 60)
+        assertFalse(vm.uiState.value.dirty)
+    }
+
+    @Test
+    fun `setting a probability on an inactive prize keeps it inactive`() {
+        val vm = viewModel()
+        vm.setProbability(3, 25)
+
+        val drill = vm.uiState.value.prizes.first { it.id == 3L }
+        assertEquals(25, drill.probability)
+        assertFalse(drill.active)
+        assertEquals(100, vm.uiState.value.activeProbabilityTotal)
+    }
+
+    @Test
+    fun `setting the probability of an unknown prize does nothing`() {
+        val vm = viewModel()
+        vm.setProbability(99, 10)
+        assertFalse(vm.uiState.value.dirty)
+    }
+
+    @Test
+    fun `setting a probability clears earlier save errors`() = runTest {
+        coEvery { repository.saveAll(any()) } returns SaveResult.Invalid(listOf(ConfigError.ProbabilityTotalOver100(160)))
+        val vm = viewModel()
+        vm.setProbability(1, 100)
+        vm.save()
+        assertTrue(vm.uiState.value.errors.isNotEmpty())
+
+        vm.setProbability(1, 50)
+        assertTrue(vm.uiState.value.errors.isEmpty())
+    }
+
+    @Test
+    fun `no prizes means a 100 percent bust chance`() {
+        val state = PrizeEditorUiState(loaded = true, activeCount = 0, activeProbabilityTotal = 0)
+        assertEquals(8, state.bustSlots)
+        assertEquals(100, state.bustProbability)
+        assertTrue(state.totalValid)
+        assertFalse(state.bustSlotsUnreachable)
+    }
+
+    @Test
+    fun `busts take what the prizes leave`() {
+        val state = PrizeEditorUiState(loaded = true, activeCount = 3, activeProbabilityTotal = 40)
+        assertEquals(5, state.bustSlots)
+        assertEquals(60, state.bustProbability)
+        assertTrue(state.totalValid)
+        assertFalse(state.bustSlotsUnreachable)
+    }
+
+    @Test
+    fun `prizes totalling 100 with bust slots on the wheel are valid but warned about`() {
+        val state = PrizeEditorUiState(loaded = true, activeCount = 2, activeProbabilityTotal = 100)
+        assertEquals(0, state.bustProbability)
+        assertTrue(state.totalValid)
+        assertTrue(state.bustSlotsUnreachable)
+    }
+
+    @Test
+    fun `a full wheel must total exactly 100`() {
+        assertFalse(PrizeEditorUiState(activeCount = 8, activeProbabilityTotal = 90).totalValid)
+        assertEquals(0, PrizeEditorUiState(activeCount = 8, activeProbabilityTotal = 90).bustProbability)
+        assertTrue(PrizeEditorUiState(activeCount = 8, activeProbabilityTotal = 100).totalValid)
+        assertFalse(PrizeEditorUiState(activeCount = 8, activeProbabilityTotal = 100).bustSlotsUnreachable)
+    }
+
+    @Test
+    fun `a total above 100 is invalid`() {
+        val state = PrizeEditorUiState(activeCount = 2, activeProbabilityTotal = 110)
+        assertFalse(state.totalValid)
+        assertEquals(0, state.bustProbability)
     }
 }

@@ -1,19 +1,21 @@
 package com.smartcodeapps.constructionprizewheel.ui.admin.prizes
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performTextReplacement
 import com.smartcodeapps.constructionprizewheel.domain.ConfigError
 import com.smartcodeapps.constructionprizewheel.domain.Prize
 import com.smartcodeapps.constructionprizewheel.ui.admin.UnsavedChangesDialog
 import com.smartcodeapps.constructionprizewheel.ui.admin.UnsavedDialogTestTags
 import com.smartcodeapps.constructionprizewheel.ui.theme.ConstructionPrizeWheelTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -31,9 +33,8 @@ class PrizeListScreenTest {
     private var added = 0
     private val edited = mutableListOf<Long>()
     private val deleted = mutableListOf<Long>()
-    private var saves = 0
-    private var discards = 0
     private var noticesShown = 0
+    private val probabilityChanges = mutableListOf<Pair<Long, Int>>()
 
     private fun show(state: PrizeEditorUiState) {
         composeRule.setContent {
@@ -44,10 +45,9 @@ class PrizeListScreenTest {
                     onEditPrize = { edited += it },
                     onDeletePrize = { deleted += it },
                     onRearrange = {},
-                    onSave = { saves++ },
-                    onDiscard = { discards++ },
                     onBack = {},
-                    onNoticeShown = { noticesShown++ }
+                    onNoticeShown = { noticesShown++ },
+                    onProbabilityChange = { id, value -> probabilityChanges += id to value }
                 )
             }
         }
@@ -79,15 +79,62 @@ class PrizeListScreenTest {
     @Test
     fun bothSectionHeadersAreShown() {
         show(state())
-        composeRule.onNodeWithTag(PrizeListTestTags.ACTIVE_HEADER).assertTextEquals("ON THE WHEEL (2 of 8)")
-        composeRule.onNodeWithTag(PrizeListTestTags.INACTIVE_HEADER).assertTextEquals("NOT ON THE WHEEL")
+        composeRule.onNodeWithTag(PrizeListTestTags.ACTIVE_HEADER).assertTextEquals("PE ROATĂ (2 din 8)")
+        composeRule.onNodeWithTag(PrizeListTestTags.INACTIVE_HEADER).assertTextEquals("NU SUNT PE ROATĂ")
     }
 
     @Test
-    fun inactiveRowsShowTheirStoredProbability() {
+    fun everyRowShowsItsStoredProbabilityInAnEditableField() {
         show(state())
-        composeRule.onNodeWithText("Inactive  •  0%").assertIsDisplayed()
-        composeRule.onNodeWithText("Active  •  60%").assertIsDisplayed()
+        composeRule.onNodeWithTag(PrizeListTestTags.probability(1)).assertTextContains("60")
+        composeRule.onNodeWithTag(PrizeListTestTags.probability(2)).assertTextContains("40")
+        composeRule.onNodeWithTag(PrizeListTestTags.probability(3)).assertTextContains("0")
+        composeRule.onNodeWithText("Inactiv").assertIsDisplayed()
+    }
+
+    @Test
+    fun donePressedOnTheKeyboardCommitsTheTypedProbability() {
+        show(state())
+        composeRule.onNodeWithTag(PrizeListTestTags.probability(1))
+            .performTextReplacement("35")
+            .performImeAction()
+        assertEquals(listOf(1L to 35), probabilityChanges)
+    }
+
+    @Test
+    fun typedProbabilityIsClampedTo100() {
+        show(state())
+        composeRule.onNodeWithTag(PrizeListTestTags.probability(2))
+            .performTextReplacement("250")
+            .performImeAction()
+        assertEquals(listOf(2L to 100), probabilityChanges)
+    }
+
+    @Test
+    fun anEmptyProbabilityCommitsAsZero() {
+        show(state())
+        composeRule.onNodeWithTag(PrizeListTestTags.probability(1))
+            .performTextReplacement("")
+            .performImeAction()
+        assertEquals(listOf(1L to 0), probabilityChanges)
+    }
+
+    @Test
+    fun anUnchangedProbabilityIsNotReported() {
+        show(state())
+        composeRule.onNodeWithTag(PrizeListTestTags.probability(1))
+            .performTextReplacement("60")
+            .performImeAction()
+        assertTrue(probabilityChanges.isEmpty())
+    }
+
+    @Test
+    fun nonDigitsAreIgnoredWhileTyping() {
+        show(state())
+        composeRule.onNodeWithTag(PrizeListTestTags.probability(1))
+            .performTextReplacement("4a5")
+            .performImeAction()
+        assertEquals(listOf(1L to 45), probabilityChanges)
     }
 
     @Test
@@ -118,10 +165,20 @@ class PrizeListScreenTest {
     }
 
     @Test
-    fun summaryShowsActiveCountAndTotal() {
+    fun summaryShowsActiveCountPrizeTotalAndBustChance() {
+        show(state().copy(activeProbabilityTotal = 40))
+        composeRule.onNodeWithTag(PrizeListTestTags.SUMMARY)
+            .assertTextEquals("Active: 2 din 8  •  Premii: 40%  •  Fără câștig: 60%")
+        composeRule.onNodeWithTag(PrizeListTestTags.BUST_WARNING).assertDoesNotExist()
+    }
+
+    @Test
+    fun warnsWhenBustSlotsCanNeverBeLandedOn() {
         show(state())
-        composeRule.onNodeWithText("Active: 2 of 8", substring = true).assertIsDisplayed()
-        composeRule.onNodeWithText("Total probability: 100%", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithTag(PrizeListTestTags.SUMMARY)
+            .assertTextEquals("Active: 2 din 8  •  Premii: 100%  •  Fără câștig: 0%")
+        composeRule.onNodeWithText("Premiile însumează 100%, deci cele 6 locuri fără câștig de pe roată nu vor fi niciodată alese.")
+            .assertIsDisplayed()
     }
 
     @Test
@@ -149,33 +206,17 @@ class PrizeListScreenTest {
     }
 
     @Test
-    fun saveAndDiscardAreDisabledWhenNothingChanged() {
-        show(state(dirty = false))
-        composeRule.onNodeWithTag(PrizeListTestTags.SAVE).assertIsNotEnabled()
-        composeRule.onNodeWithTag(PrizeListTestTags.DISCARD).assertIsNotEnabled()
-    }
-
-    @Test
-    fun saveAndDiscardWorkWhenDirty() {
-        show(state(dirty = true))
-        composeRule.onNodeWithTag(PrizeListTestTags.SAVE).assertIsEnabled().performClick()
-        composeRule.onNodeWithTag(PrizeListTestTags.DISCARD).assertIsEnabled().performClick()
-
-        assertEquals(1, saves)
-        assertEquals(1, discards)
-    }
-
-    @Test
     fun validationErrorsAreShownTogether() {
         show(
             state(
                 dirty = true,
-                errors = listOf(ConfigError.ProbabilityTotalInvalid(90), ConfigError.ActiveMissingImage(1))
+                errors = listOf(ConfigError.ProbabilityTotalOver100(120), ConfigError.ActiveMissingImage(1))
             )
         )
         composeRule.onNodeWithTag(PrizeListTestTags.ERRORS).assertIsDisplayed()
-        composeRule.onNodeWithText("Active prize probabilities must total 100% (currently 90%).").assertIsDisplayed()
-        composeRule.onNodeWithText("Hammer is active but has no image.").assertIsDisplayed()
+        composeRule.onNodeWithText("Probabilitățile premiilor active nu pot depăși 100% în total (acum 120%).")
+            .assertIsDisplayed()
+        composeRule.onNodeWithText("Hammer este activ, dar nu are imagine.").assertIsDisplayed()
     }
 
     @Test
@@ -187,7 +228,7 @@ class PrizeListScreenTest {
     @Test
     fun pushedOutNoticeIsShownAndThenAcknowledged() {
         show(state(dirty = true, pushedOut = "Hammer"))
-        composeRule.onNodeWithText("Hammer moved to Not on the wheel (maximum 8 prizes).").assertIsDisplayed()
+        composeRule.onNodeWithText("Hammer a fost mutat în secțiunea „Nu sunt pe roată” (maximum 8 premii).").assertIsDisplayed()
         composeRule.waitForIdle()
         assertEquals(1, noticesShown)
     }

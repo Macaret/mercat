@@ -5,7 +5,10 @@ sealed interface ConfigError {
     data class ProbabilityOutOfRange(val prizeId: Long, val value: Int) : ConfigError
     data class TooManyActive(val count: Int) : ConfigError
     data class ActiveMissingImage(val prizeId: Long) : ConfigError
-    data class ProbabilityTotalInvalid(val total: Int) : ConfigError
+    data class ProbabilityTotalOver100(val total: Int) : ConfigError
+
+    /** Every slot holds a prize, so there are no busts to take the rest of the chance. */
+    data class FullWheelTotalNot100(val total: Int) : ConfigError
 }
 
 object PrizeConfigValidator {
@@ -23,9 +26,10 @@ object PrizeConfigValidator {
         }
         active.filter { it.imagePath.isNullOrBlank() }
             .forEach { errors += ConfigError.ActiveMissingImage(it.id) }
-        if (active.isNotEmpty()) {
-            val total = active.sumOf { it.probability }
-            if (total != 100) errors += ConfigError.ProbabilityTotalInvalid(total)
+        val total = active.sumOf { it.probability }
+        when {
+            total > 100 -> errors += ConfigError.ProbabilityTotalOver100(total)
+            active.size == WHEEL_SLOTS && total != 100 -> errors += ConfigError.FullWheelTotalNot100(total)
         }
         return errors
     }

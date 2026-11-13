@@ -103,14 +103,6 @@ class TabletLayoutTest {
     }
 
     @Test
-    fun noPrizesMessageStaysOnScreen() {
-        sizes.forEach { size ->
-            show(size) { WheelContent(state = WheelUiState(loaded = true), rotationDegrees = { 0f }, onSpin = {}) }
-            assertInside(size, WheelTestTags.NO_PRIZES_MESSAGE)
-        }
-    }
-
-    @Test
     fun resultScreenKeepsTheContinueButtonOnScreen() {
         val longPrize = ResultPrize(
             name = "Professional Heavy Duty Cordless Power Drill Set",
@@ -152,7 +144,7 @@ class TabletLayoutTest {
     }
 
     @Test
-    fun prizeListKeepsTheSaveBarOnScreenWithManyPrizes() {
+    fun prizeListKeepsTheAddButtonOnScreenWithManyPrizes() {
         val prizes = List(12) { index ->
             Prize(
                 id = index + 1L,
@@ -171,11 +163,9 @@ class TabletLayoutTest {
                         loaded = true, prizes = prizes, dirty = true, activeCount = 8, activeProbabilityTotal = 80
                     ),
                     onAddPrize = {}, onEditPrize = {}, onDeletePrize = {}, onRearrange = {},
-                    onSave = {}, onDiscard = {}, onBack = {}
+                    onBack = {}
                 )
             }
-            assertInside(size, PrizeListTestTags.SAVE)
-            assertInside(size, PrizeListTestTags.DISCARD)
             assertInside(size, PrizeListTestTags.ADD)
         }
     }

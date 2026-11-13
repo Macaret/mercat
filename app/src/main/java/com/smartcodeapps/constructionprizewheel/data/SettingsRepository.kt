@@ -21,9 +21,9 @@ data class Branding(
     val congratsMessage: String = DEFAULT_CONGRATS_MESSAGE
 ) {
     companion object {
-        const val DEFAULT_MAIN_TITLE = "SPIN THE WHEEL AND WIN!"
-        const val DEFAULT_CONGRATS_TITLE = "CONGRATULATIONS!"
-        const val DEFAULT_CONGRATS_MESSAGE = "YOU WON!"
+        const val DEFAULT_MAIN_TITLE = "ÎNVÂRTE ROATA ȘI CÂȘTIGĂ!"
+        const val DEFAULT_CONGRATS_TITLE = "FELICITĂRI!"
+        const val DEFAULT_CONGRATS_MESSAGE = "AI CÂȘTIGAT!"
     }
 }
 

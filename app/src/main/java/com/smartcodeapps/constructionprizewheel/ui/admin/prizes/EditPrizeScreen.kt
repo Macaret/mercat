@@ -20,11 +20,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -44,9 +45,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartcodeapps.constructionprizewheel.R
 import com.smartcodeapps.constructionprizewheel.domain.MAX_ACTIVE_PRIZES
+import com.smartcodeapps.constructionprizewheel.ui.admin.ContentPanelColor
+import com.smartcodeapps.constructionprizewheel.ui.admin.SidebarColor
+import com.smartcodeapps.constructionprizewheel.ui.common.BluePill
+import com.smartcodeapps.constructionprizewheel.ui.common.GlossyPillButton
+import com.smartcodeapps.constructionprizewheel.ui.common.GreenPill
+import com.smartcodeapps.constructionprizewheel.ui.common.NavyPill
 import com.smartcodeapps.constructionprizewheel.ui.common.rememberImageBitmap
 import com.smartcodeapps.constructionprizewheel.ui.theme.ConstructionPrizeWheelTheme
 import kotlinx.coroutines.launch
@@ -176,107 +184,174 @@ fun EditPrizeContent(
 ) {
     val image = rememberImageBitmap(imagePath)
 
-    Row(
-        modifier = modifier.fillMaxSize().padding(24.dp),
-        horizontalArrangement = Arrangement.spacedBy(32.dp)
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(260.dp)) {
-            val frame = Modifier.size(240.dp).clip(RoundedCornerShape(16.dp))
-            if (image != null) {
-                Image(bitmap = image, contentDescription = null, contentScale = ContentScale.Crop, modifier = frame)
-            } else {
-                Box(modifier = frame.background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
-                    Text(stringResource(R.string.no_image), style = MaterialTheme.typography.titleMedium)
+    // Same frame as the admin layout: navy background around a light rounded panel.
+    Box(modifier = modifier.fillMaxSize().background(SidebarColor).padding(16.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(24.dp))
+                .background(ContentPanelColor)
+                .padding(24.dp),
+            horizontalArrangement = Arrangement.spacedBy(32.dp)
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(260.dp)) {
+                val frame = Modifier.size(240.dp).clip(RoundedCornerShape(16.dp))
+                if (image != null) {
+                    Image(bitmap = image, contentDescription = null, contentScale = ContentScale.Crop, modifier = frame)
+                } else {
+                    Box(modifier = frame.background(ImagePlaceholderColor), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = stringResource(R.string.no_image),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = TextColor
+                        )
+                    }
+                }
+                GlossyPillButton(
+                    text = stringResource(
+                        if (imagePath == null) R.string.choose_image_button else R.string.change_image_button
+                    ),
+                    onClick = onChooseImage,
+                    palette = BluePill,
+                    textSize = 16.sp,
+                    modifier = Modifier.padding(top = 16.dp).fillMaxWidth().height(56.dp)
+                        .testTag(EditPrizeTestTags.CHOOSE_IMAGE)
+                )
+                GlossyPillButton(
+                    text = stringResource(R.string.take_photo_button),
+                    onClick = onTakePhoto,
+                    palette = NavyPill,
+                    textSize = 16.sp,
+                    modifier = Modifier.padding(top = 12.dp).fillMaxWidth().height(56.dp)
+                        .testTag(EditPrizeTestTags.TAKE_PHOTO)
+                )
+                if (imageError) {
+                    Text(
+                        text = stringResource(R.string.image_error),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 8.dp).testTag(EditPrizeTestTags.IMAGE_ERROR)
+                    )
                 }
             }
-            OutlinedButton(
-                onClick = onChooseImage,
-                modifier = Modifier.padding(top = 16.dp).fillMaxWidth().height(56.dp).testTag(EditPrizeTestTags.CHOOSE_IMAGE)
-            ) {
-                Text(
-                    text = stringResource(if (imagePath == null) R.string.choose_image_button else R.string.change_image_button),
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
-            OutlinedButton(
-                onClick = onTakePhoto,
-                modifier = Modifier.padding(top = 8.dp).fillMaxWidth().height(56.dp).testTag(EditPrizeTestTags.TAKE_PHOTO)
-            ) {
-                Text(text = stringResource(R.string.take_photo_button), style = MaterialTheme.typography.titleMedium)
-            }
-            if (imageError) {
-                Text(
-                    text = stringResource(R.string.image_error),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = 8.dp).testTag(EditPrizeTestTags.IMAGE_ERROR)
-                )
-            }
-        }
 
-        Column(
-            modifier = Modifier.weight(1f).fillMaxSize().verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = stringResource(if (isNew) R.string.new_prize_title else R.string.edit_prize_title),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.testTag(EditPrizeTestTags.TITLE)
-            )
-            OutlinedTextField(
-                value = name,
-                onValueChange = onNameChange,
-                label = { Text(stringResource(R.string.field_name)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().testTag(EditPrizeTestTags.NAME)
-            )
-            OutlinedTextField(
-                value = description,
-                onValueChange = onDescriptionChange,
-                label = { Text(stringResource(R.string.field_description)) },
-                minLines = 2,
-                maxLines = 3,
-                modifier = Modifier.fillMaxWidth().testTag(EditPrizeTestTags.DESCRIPTION)
-            )
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Switch(
-                    checked = active,
-                    onCheckedChange = onActiveChange,
-                    enabled = canActivate,
-                    modifier = Modifier.testTag(EditPrizeTestTags.ACTIVE)
-                )
-                Text(stringResource(R.string.active_label), style = MaterialTheme.typography.titleMedium)
-            }
-            if (!canActivate) {
+            Column(
+                modifier = Modifier.weight(1f).fillMaxSize().verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 Text(
-                    text = stringResource(R.string.active_limit_hint, MAX_ACTIVE_PRIZES),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.testTag(EditPrizeTestTags.ACTIVE_HINT)
+                    text = stringResource(if (isNew) R.string.new_prize_title else R.string.edit_prize_title),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TextColor,
+                    modifier = Modifier.testTag(EditPrizeTestTags.TITLE)
                 )
-            }
-            OutlinedTextField(
-                value = probability,
-                onValueChange = onProbabilityChange,
-                label = { Text(stringResource(R.string.field_probability)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.width(240.dp).testTag(EditPrizeTestTags.PROBABILITY)
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(top = 8.dp)) {
-                OutlinedButton(
-                    onClick = onCancel,
-                    modifier = Modifier.height(56.dp).testTag(EditPrizeTestTags.CANCEL)
-                ) { Text(stringResource(R.string.cancel_button), style = MaterialTheme.typography.titleMedium) }
-                Button(
-                    onClick = onDone,
-                    enabled = name.isNotBlank(),
-                    modifier = Modifier.height(56.dp).testTag(EditPrizeTestTags.DONE)
-                ) { Text(stringResource(R.string.done_button), style = MaterialTheme.typography.titleMedium) }
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = onNameChange,
+                    label = { Text(stringResource(R.string.field_name)) },
+                    singleLine = true,
+                    shape = FieldShape,
+                    colors = fieldColors(),
+                    modifier = Modifier.fillMaxWidth().testTag(EditPrizeTestTags.NAME)
+                )
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = onDescriptionChange,
+                    label = { Text(stringResource(R.string.field_description)) },
+                    minLines = 2,
+                    maxLines = 3,
+                    shape = FieldShape,
+                    colors = fieldColors(),
+                    modifier = Modifier.fillMaxWidth().testTag(EditPrizeTestTags.DESCRIPTION)
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Switch(
+                        checked = active,
+                        onCheckedChange = onActiveChange,
+                        enabled = canActivate,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = AccentBlue,
+                            checkedBorderColor = AccentBlue,
+                            uncheckedThumbColor = Color.White,
+                            uncheckedTrackColor = Color(0xFFB4BCCB),
+                            uncheckedBorderColor = Color(0xFFB4BCCB),
+                            disabledCheckedThumbColor = Color.White,
+                            disabledCheckedTrackColor = AccentBlue.copy(alpha = 0.4f),
+                            disabledUncheckedThumbColor = Color.White,
+                            disabledUncheckedTrackColor = Color(0xFFB4BCCB).copy(alpha = 0.5f),
+                            disabledUncheckedBorderColor = Color.Transparent,
+                        ),
+                        modifier = Modifier.testTag(EditPrizeTestTags.ACTIVE)
+                    )
+                    Text(
+                        text = stringResource(R.string.active_label),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = TextColor
+                    )
+                }
+                if (!canActivate) {
+                    Text(
+                        text = stringResource(R.string.active_limit_hint, MAX_ACTIVE_PRIZES),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextColor,
+                        modifier = Modifier.testTag(EditPrizeTestTags.ACTIVE_HINT)
+                    )
+                }
+                OutlinedTextField(
+                    value = probability,
+                    onValueChange = onProbabilityChange,
+                    label = { Text(stringResource(R.string.field_probability)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    shape = FieldShape,
+                    colors = fieldColors(),
+                    modifier = Modifier.width(240.dp).testTag(EditPrizeTestTags.PROBABILITY)
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(top = 8.dp)) {
+                    GlossyPillButton(
+                        text = stringResource(R.string.cancel_button),
+                        onClick = onCancel,
+                        palette = NavyPill,
+                        textSize = 16.sp,
+                        modifier = Modifier.height(56.dp).testTag(EditPrizeTestTags.CANCEL)
+                    )
+                    GlossyPillButton(
+                        text = stringResource(R.string.done_button),
+                        onClick = onDone,
+                        enabled = name.isNotBlank(),
+                        palette = GreenPill,
+                        textSize = 16.sp,
+                        modifier = Modifier.height(56.dp).testTag(EditPrizeTestTags.DONE)
+                    )
+                }
             }
         }
     }
 }
+
+private val AccentBlue = Color(0xFF1E6FD9)
+private val TextColor = Color(0xFF13233D)
+private val ImagePlaceholderColor = Color(0xFFE3E7EE)
+private val FieldShape = RoundedCornerShape(12.dp)
+
+/** White fields with a blue focus accent, so they sit on the light admin panel instead of the purple theme. */
+@Composable
+internal fun fieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedTextColor = TextColor,
+    unfocusedTextColor = TextColor,
+    focusedContainerColor = Color.White,
+    unfocusedContainerColor = Color.White,
+    focusedBorderColor = AccentBlue,
+    unfocusedBorderColor = Color(0xFFB4BCCB),
+    focusedLabelColor = AccentBlue,
+    unfocusedLabelColor = Color(0xFF5B6678),
+    cursorColor = AccentBlue,
+)
 
 @Preview(widthDp = 1024, heightDp = 600, showBackground = true)
 @Composable

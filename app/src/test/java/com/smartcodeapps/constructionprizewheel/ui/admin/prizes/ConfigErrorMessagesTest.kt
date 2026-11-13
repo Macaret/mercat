@@ -14,10 +14,18 @@ class ConfigErrorMessagesTest {
     )
 
     @Test
-    fun `total error carries the actual total`() {
+    fun `over 100 error carries the actual total`() {
         assertEquals(
-            ErrorText(R.string.err_total_not_100, listOf(90)),
-            ConfigError.ProbabilityTotalInvalid(90).toErrorText(prizes)
+            ErrorText(R.string.err_total_over_100, listOf(120)),
+            ConfigError.ProbabilityTotalOver100(120).toErrorText(prizes)
+        )
+    }
+
+    @Test
+    fun `full wheel error carries the slot count and the actual total`() {
+        assertEquals(
+            ErrorText(R.string.err_full_wheel_total, listOf(8, 90)),
+            ConfigError.FullWheelTotalNot100(90).toErrorText(prizes)
         )
     }
 
@@ -48,7 +56,7 @@ class ConfigErrorMessagesTest {
     @Test
     fun `a prize without a name falls back to a placeholder`() {
         assertEquals(
-            ErrorText(R.string.err_missing_image, listOf("(no name)")),
+            ErrorText(R.string.err_missing_image, listOf("(fără nume)")),
             ConfigError.ActiveMissingImage(2).toErrorText(prizes)
         )
     }

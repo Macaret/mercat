@@ -1,8 +1,10 @@
 package com.smartcodeapps.constructionprizewheel.ui.admin.history
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,14 +12,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -29,7 +32,6 @@ import com.smartcodeapps.constructionprizewheel.R
 import com.smartcodeapps.constructionprizewheel.ui.theme.ConstructionPrizeWheelTheme
 
 object HistoryTestTags {
-    const val BACK = "history_back"
     const val SUMMARY = "history_summary"
     const val EMPTY = "history_empty"
     fun row(id: Long) = "history_row_$id"
@@ -40,28 +42,25 @@ object HistoryTestTags {
 @Composable
 fun HistoryScreen(onBack: () -> Unit, viewModel: HistoryViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    HistoryContent(state = state, onRedeemedChange = viewModel::onRedeemedChange, onBack = onBack)
+    BackHandler(onBack = onBack)
+    HistoryContent(state = state, onRedeemedChange = viewModel::onRedeemedChange)
 }
 
 @Composable
 fun HistoryContent(
     state: HistoryUiState,
     onRedeemedChange: (recordId: Long, redeemed: Boolean) -> Unit,
-    onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack, modifier = Modifier.testTag(HistoryTestTags.BACK)) {
-                Text(stringResource(R.string.back_button), style = MaterialTheme.typography.titleMedium)
-            }
-            Text(
-                text = stringResource(R.string.history_title),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 8.dp)
-            )
-        }
+    Column(
+        modifier = modifier.fillMaxSize().padding(start = 12.dp, top = 12.dp, end = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.history_title),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold
+        )
 
         Text(
             text = stringResource(R.string.history_summary, state.totalCount, state.notRedeemedCount),
@@ -69,6 +68,7 @@ fun HistoryContent(
             modifier = Modifier.testTag(HistoryTestTags.SUMMARY)
         )
 
+        // The list takes the rest of the height and scrolls down to the bottom edge of the panel.
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             if (state.loaded && state.entries.isEmpty()) {
                 Text(
@@ -77,7 +77,11 @@ fun HistoryContent(
                     modifier = Modifier.align(Alignment.Center).testTag(HistoryTestTags.EMPTY)
                 )
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    contentPadding = PaddingValues(bottom = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
                     items(state.entries, key = { it.id }) { entry ->
                         HistoryRow(entry = entry, onRedeemedChange = { onRedeemedChange(entry.id, it) })
                     }
@@ -89,7 +93,10 @@ fun HistoryContent(
 
 @Composable
 private fun HistoryRow(entry: HistoryEntry, onRedeemedChange: (Boolean) -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().testTag(HistoryTestTags.row(entry.id))) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        modifier = Modifier.fillMaxWidth().testTag(HistoryTestTags.row(entry.id))
+    ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -134,8 +141,7 @@ private fun HistoryPreview() {
                     HistoryEntry(1, "Paint Brush", "12 Nov 2026", "17:20:03", false)
                 )
             ),
-            onRedeemedChange = { _, _ -> },
-            onBack = {}
+            onRedeemedChange = { _, _ -> }
         )
     }
 }

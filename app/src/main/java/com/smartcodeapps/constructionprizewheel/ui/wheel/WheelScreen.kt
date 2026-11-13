@@ -16,9 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,7 +29,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -40,13 +36,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartcodeapps.constructionprizewheel.R
 import com.smartcodeapps.constructionprizewheel.ui.common.MainButton
 import com.smartcodeapps.constructionprizewheel.ui.common.rememberImageBitmap
+import com.smartcodeapps.constructionprizewheel.ui.common.rememberShineSchedule
 import com.smartcodeapps.constructionprizewheel.ui.theme.ConstructionPrizeWheelTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 object WheelTestTags {
     const val SPIN_BUTTON = "spin_button"
-    const val NO_PRIZES_MESSAGE = "no_prizes_message"
     const val LOGO = "logo"
 }
 
@@ -96,6 +92,7 @@ fun WheelContent(
     onAdminRequested: () -> Unit = {}
 ) {
     val images = rememberSegmentImages(state.segments)
+    val shine = rememberShineSchedule()
     Box(modifier = modifier.fillMaxSize()) {
         Image(
             painter = painterResource(R.drawable.wheel_background),
@@ -126,16 +123,10 @@ fun WheelContent(
                 text = stringResource(R.string.spin_button),
                 onClick = onSpin,
                 enabled = state.canSpin,
+                // No streak while the wheel is spinning or the button is disabled.
+                shine = if (state.canSpin) ({ shine.button }) else null,
                 modifier = Modifier.height(SPIN_BUTTON_HEIGHT).testTag(WheelTestTags.SPIN_BUTTON)
             )
-            if (state.showNoPrizesMessage) {
-                Text(
-                    text = stringResource(R.string.no_prizes_message),
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 12.dp).width(320.dp).testTag(WheelTestTags.NO_PRIZES_MESSAGE)
-                )
-            }
         }
     }
 }
@@ -160,8 +151,9 @@ private fun rememberSegmentImages(segments: List<WheelSegment>): Map<Long, Image
     val images by produceState<Map<Long, ImageBitmap>>(initialValue = emptyMap(), segments) {
         value = withContext(Dispatchers.IO) {
             segments.mapNotNull { segment ->
+                val prizeId = segment.prizeId ?: return@mapNotNull null
                 val bitmap = segment.imagePath?.let { BitmapFactory.decodeFile(it)?.asImageBitmap() }
-                bitmap?.let { segment.prizeId to it }
+                bitmap?.let { prizeId to it }
             }.toMap()
         }
     }
@@ -180,7 +172,7 @@ private fun WheelContentPreview() {
         WheelContent(
             state = WheelUiState(
                 loaded = true,
-                segments = List(6) { WheelSegment(it.toLong(), "Prize $it", null) }
+                segments = List(8) { if (it % 3 == 1) WheelSegment.Bust else WheelSegment(it.toLong(), "Prize $it", null) }
             ),
             rotationDegrees = { 0f },
             onSpin = {}

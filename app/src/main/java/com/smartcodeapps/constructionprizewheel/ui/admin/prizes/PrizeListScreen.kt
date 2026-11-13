@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,15 +20,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -39,22 +41,30 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartcodeapps.constructionprizewheel.R
 import com.smartcodeapps.constructionprizewheel.domain.MAX_ACTIVE_PRIZES
 import com.smartcodeapps.constructionprizewheel.domain.Prize
 import com.smartcodeapps.constructionprizewheel.ui.admin.UnsavedChangesDialog
+import com.smartcodeapps.constructionprizewheel.ui.common.BluePill
+import com.smartcodeapps.constructionprizewheel.ui.common.GlossyPillButton
 import com.smartcodeapps.constructionprizewheel.ui.common.rememberImageBitmap
 import com.smartcodeapps.constructionprizewheel.ui.theme.ConstructionPrizeWheelTheme
 import sh.calvin.reorderable.ReorderableCollectionItemScope
@@ -63,10 +73,9 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 
 object PrizeListTestTags {
     const val ADD = "prize_add"
-    const val SAVE = "prize_save"
-    const val DISCARD = "prize_discard"
     const val BACK = "prize_back"
     const val SUMMARY = "prize_summary"
+    const val BUST_WARNING = "prize_bust_warning"
     const val ERRORS = "prize_errors"
     const val EMPTY = "prize_empty"
     const val ACTIVE_HEADER = "prize_active_header"
@@ -77,6 +86,7 @@ object PrizeListTestTags {
     fun handle(id: Long) = "prize_handle_$id"
     fun edit(id: Long) = "prize_edit_$id"
     fun delete(id: Long) = "prize_delete_$id"
+    fun probability(id: Long) = "prize_probability_$id"
 }
 
 private const val HEADER_ACTIVE = Long.MIN_VALUE
@@ -110,6 +120,12 @@ fun PrizeListScreen(
     var confirmLeave by remember { mutableStateOf(false) }
     val requestBack = { if (state.dirty) confirmLeave = true else onBack() }
 
+    // Every change is saved automatically. If the configuration is invalid (for example the
+    // probabilities don't total 100%), the errors are shown and saving is retried on the next change.
+    LaunchedEffect(state.prizes, state.dirty) {
+        if (state.dirty && !state.saving && state.errors.isEmpty()) editor.save()
+    }
+
     BackHandler(onBack = requestBack)
     PrizeListContent(
         state = state,
@@ -117,10 +133,9 @@ fun PrizeListScreen(
         onEditPrize = onEditPrize,
         onDeletePrize = editor::deletePrize,
         onRearrange = editor::rearrange,
-        onSave = editor::save,
-        onDiscard = editor::discard,
         onBack = requestBack,
-        onNoticeShown = editor::clearPushedOutNotice
+        onNoticeShown = editor::clearPushedOutNotice,
+        onProbabilityChange = editor::setProbability
     )
 
     if (confirmLeave) {
@@ -142,11 +157,10 @@ fun PrizeListContent(
     onEditPrize: (Long) -> Unit,
     onDeletePrize: (Long) -> Unit,
     onRearrange: (List<Long>) -> Unit,
-    onSave: () -> Unit,
-    onDiscard: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    onNoticeShown: () -> Unit = {}
+    onNoticeShown: () -> Unit = {},
+    onProbabilityChange: (id: Long, probability: Int) -> Unit = { _, _ -> }
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val notice = state.pushedOutPrizeName?.let { stringResource(R.string.pushed_out_notice, it, MAX_ACTIVE_PRIZES) }
@@ -158,31 +172,46 @@ fun PrizeListContent(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(start = 12.dp, top = 12.dp, end = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = onBack, modifier = Modifier.testTag(PrizeListTestTags.BACK)) {
-                    Text(stringResource(R.string.back_button), style = MaterialTheme.typography.titleMedium)
-                }
                 Text(
                     text = stringResource(R.string.prizes_title),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f).padding(start = 8.dp)
+                    modifier = Modifier.weight(1f)
                 )
-                Button(onClick = onAddPrize, modifier = Modifier.height(56.dp).testTag(PrizeListTestTags.ADD)) {
-                    Text(stringResource(R.string.add_prize_button), style = MaterialTheme.typography.titleMedium)
-                }
+                GlossyPillButton(
+                    text = stringResource(R.string.add_prize_button),
+                    onClick = onAddPrize,
+                    palette = BluePill,
+                    textSize = 16.sp,
+                    modifier = Modifier.height(56.dp).testTag(PrizeListTestTags.ADD)
+                )
             }
 
-            val totalOk = state.activeCount == 0 || state.activeProbabilityTotal == 100
             Text(
                 text = stringResource(
-                    R.string.prize_summary, state.activeCount, MAX_ACTIVE_PRIZES, state.activeProbabilityTotal
+                    R.string.prize_summary,
+                    state.activeCount,
+                    MAX_ACTIVE_PRIZES,
+                    state.activeProbabilityTotal,
+                    state.bustProbability
                 ),
                 style = MaterialTheme.typography.titleMedium,
-                color = if (totalOk) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error,
+                color = if (state.totalValid) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error,
                 modifier = Modifier.testTag(PrizeListTestTags.SUMMARY)
             )
+            if (state.bustSlotsUnreachable) {
+                Text(
+                    text = stringResource(R.string.bust_unreachable_warning, state.bustSlots),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.testTag(PrizeListTestTags.BUST_WARNING)
+                )
+            }
 
             if (state.errors.isNotEmpty()) ErrorsCard(state)
 
@@ -198,16 +227,16 @@ fun PrizeListContent(
                         prizes = state.prizes,
                         onEditPrize = onEditPrize,
                         onDeletePrize = onDeletePrize,
-                        onRearrange = onRearrange
+                        onRearrange = onRearrange,
+                        onProbabilityChange = onProbabilityChange
                     )
                 }
             }
 
-            SaveBar(state = state, onSave = onSave, onDiscard = onDiscard, modifier = Modifier.align(Alignment.End))
         }
         SnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 104.dp)
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp)
         )
     }
 }
@@ -217,7 +246,8 @@ private fun PrizeSections(
     prizes: List<Prize>,
     onEditPrize: (Long) -> Unit,
     onDeletePrize: (Long) -> Unit,
-    onRearrange: (List<Long>) -> Unit
+    onRearrange: (List<Long>) -> Unit,
+    onProbabilityChange: (id: Long, probability: Int) -> Unit
 ) {
     var resetKey by remember { mutableIntStateOf(0) }
     val arrangement = remember(prizes, resetKey) { buildArrangement(prizes).toMutableStateList() }
@@ -238,6 +268,7 @@ private fun PrizeSections(
 
     LazyColumn(
         state = lazyListState,
+        contentPadding = PaddingValues(bottom = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxSize()
     ) {
@@ -269,6 +300,7 @@ private fun PrizeSections(
                             isDragging = isDragging,
                             onEdit = { onEditPrize(prize.id) },
                             onDelete = { onDeletePrize(prize.id) },
+                            onProbabilityChange = { onProbabilityChange(prize.id, it) },
                             onDragStopped = {
                                 onRearrange(activeIdsOf(arrangement))
                                 resetKey++
@@ -320,16 +352,13 @@ private fun ReorderableCollectionItemScope.PrizeRow(
     isDragging: Boolean,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    onProbabilityChange: (Int) -> Unit,
     onDragStopped: () -> Unit
 ) {
     val image = rememberImageBitmap(prize.imagePath)
     val elevation by animateDpAsState(if (isDragging) 10.dp else 0.dp, label = "dragElevation")
     Card(
-        colors = if (inactiveSection) {
-            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-        } else {
-            CardDefaults.cardColors()
-        },
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = elevation),
         modifier = Modifier.fillMaxWidth().testTag(PrizeListTestTags.row(prize.id))
     ) {
@@ -363,19 +392,73 @@ private fun ReorderableCollectionItemScope.PrizeRow(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = if (prize.active) stringResource(R.string.prize_row_active, prize.probability)
-                    else stringResource(R.string.prize_row_inactive_probability, prize.probability),
+                    text = stringResource(if (prize.active) R.string.prize_row_active else R.string.prize_row_inactive),
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
-            TextButton(onClick = onEdit, modifier = Modifier.testTag(PrizeListTestTags.edit(prize.id))) {
-                Text(stringResource(R.string.edit_button))
-            }
-            TextButton(onClick = onDelete, modifier = Modifier.testTag(PrizeListTestTags.delete(prize.id))) {
-                Text(stringResource(R.string.delete_button), color = MaterialTheme.colorScheme.error)
-            }
+            ProbabilityField(
+                value = prize.probability,
+                description = stringResource(R.string.probability_field_description, prize.name.ifBlank { "—" }),
+                onCommit = onProbabilityChange,
+                modifier = Modifier.testTag(PrizeListTestTags.probability(prize.id))
+            )
+            RowActionButton(
+                kind = RowActionKind.EDIT,
+                onClick = onEdit,
+                modifier = Modifier.testTag(PrizeListTestTags.edit(prize.id))
+            )
+            RowActionButton(
+                kind = RowActionKind.DELETE,
+                onClick = onDelete,
+                modifier = Modifier.padding(end = 12.dp).testTag(PrizeListTestTags.delete(prize.id))
+            )
         }
     }
+}
+
+/**
+ * Inline percentage editor. The text is kept locally while typing and committed (clamped to 0..100)
+ * when the keyboard's Done is pressed or the field loses focus, so the list's auto-save never sees
+ * half-typed values.
+ */
+@Composable
+private fun ProbabilityField(
+    value: Int,
+    description: String,
+    onCommit: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var text by remember(value) { mutableStateOf(value.toString()) }
+    var focused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+
+    fun commit() {
+        val parsed = (text.toIntOrNull() ?: 0).coerceIn(0, 100)
+        text = parsed.toString()
+        if (parsed != value) onCommit(parsed)
+    }
+
+    OutlinedTextField(
+        value = text,
+        onValueChange = { text = sanitizeProbability(it) },
+        singleLine = true,
+        suffix = { Text("%") },
+        textStyle = MaterialTheme.typography.titleMedium,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = {
+            commit()
+            focusManager.clearFocus()
+        }),
+        shape = RoundedCornerShape(12.dp),
+        colors = fieldColors(),
+        modifier = modifier
+            .width(112.dp)
+            .semantics { contentDescription = description }
+            .onFocusChanged {
+                if (focused && !it.isFocused) commit()
+                focused = it.isFocused
+            }
+    )
 }
 
 @Composable
@@ -413,7 +496,7 @@ private fun PrizeListPreview() {
                 activeProbabilityTotal = 100
             ),
             onAddPrize = {}, onEditPrize = {}, onDeletePrize = {}, onRearrange = {},
-            onSave = {}, onDiscard = {}, onBack = {}
+            onBack = {}
         )
     }
 }

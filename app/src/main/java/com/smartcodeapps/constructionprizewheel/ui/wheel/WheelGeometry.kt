@@ -29,5 +29,6 @@ object WheelGeometry {
     fun colorIndex(index: Int, count: Int): Int =
         if (count > 1 && count % 2 == 1 && index == count - 1) 2 else index % 2
 
-    const val IMAGE_DISTANCE = 0.62f
+    /** Image center as a fraction of the wheel radius. Image outer edge is at IMAGE_DISTANCE + 0.25, inside the rim. */
+    const val IMAGE_DISTANCE = 0.70f
 }

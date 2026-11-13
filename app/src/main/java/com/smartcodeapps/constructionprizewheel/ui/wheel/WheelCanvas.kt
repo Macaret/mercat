@@ -33,6 +33,7 @@ private val SegmentGradients = listOf(
     listOf(Color(0xFFF2352B), Color(0xFFD81D17), Color(0xFFB30F0B)), // red
     listOf(Color(0xFF22B53A), Color(0xFF13972B), Color(0xFF0B7A20)), // green
 )
+private val BustGradient = listOf(Color(0xFF9E9E9E), Color(0xFF7A7A7A), Color(0xFF5E5E5E))
 private val SegmentColors = SegmentGradients.map { it[1] }
 private val RimColor = Color(0xFF3A3A3A)
 private val PointerColor = Color(0xFFC62828)
@@ -56,10 +57,11 @@ fun WheelCanvas(
                 if (count == 0) {
                     drawCircle(color = SegmentColors[0].copy(alpha = 0.3f), radius = radius, center = center)
                 }
-                segments.forEachIndexed { index, _ ->
+                segments.forEachIndexed { index, segment ->
                     drawArc(
                         brush = Brush.radialGradient(
-                            colors = SegmentGradients[WheelGeometry.colorIndex(index, count)],
+                            colors = if (segment.isBust) BustGradient
+                            else SegmentGradients[WheelGeometry.colorIndex(index, count)],
                             center = center,
                             radius = radius
                         ),
@@ -79,7 +81,7 @@ fun WheelCanvas(
                     }
                 }
                 segments.forEachIndexed { index, segment ->
-                    val image = images[segment.prizeId] ?: return@forEachIndexed
+                    val image = segment.prizeId?.let { images[it] } ?: return@forEachIndexed
                     val side = WheelGeometry.imageSize(radius, count)
                     val distance = radius * WheelGeometry.IMAGE_DISTANCE
                     rotate(degrees = WheelGeometry.segmentCenter(index, count), pivot = center) {

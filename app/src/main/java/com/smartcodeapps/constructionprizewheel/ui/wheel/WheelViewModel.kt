@@ -6,7 +6,8 @@ import com.smartcodeapps.constructionprizewheel.data.PrizeRepository
 import com.smartcodeapps.constructionprizewheel.data.SettingsRepository
 import com.smartcodeapps.constructionprizewheel.data.SpinRecordRepository
 import com.smartcodeapps.constructionprizewheel.domain.PrizeSelectionEngine
-import com.smartcodeapps.constructionprizewheel.domain.wheelPrizes
+import com.smartcodeapps.constructionprizewheel.domain.SpinOutcome
+import com.smartcodeapps.constructionprizewheel.domain.WHEEL_SLOTS
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -42,20 +43,14 @@ class WheelViewModel @Inject constructor(
         if (current.busy || !spinState.compareAndSet(current, current.copy(busy = true))) return
 
         viewModelScope.launch {
-            val wheel = prizeRepository.observePrizes().first().wheelPrizes()
-            val winner = selectionEngine.select(wheel)
-            if (winner == null) {
-                spinState.update { it.copy(busy = false) }
-                return@launch
-            }
-            val winnerIndex = wheel.indexOfFirst { it.id == winner.id }
+            val outcome = selectionEngine.select(prizeRepository.observePrizes().first())
             spinState.update {
                 it.copy(
                     plan = SpinPlan(
-                        winnerPrizeId = winner.id,
-                        winnerIndex = winnerIndex,
+                        winnerPrizeId = (outcome as? SpinOutcome.Win)?.prize?.id,
+                        winnerIndex = outcome.slotIndex,
                         targetRotation = SpinPlanner.targetRotation(
-                            it.restingRotation, winnerIndex, wheel.size, random
+                            it.restingRotation, outcome.slotIndex, WHEEL_SLOTS, random
                         )
                     )
                 )
@@ -63,10 +58,13 @@ class WheelViewModel @Inject constructor(
         }
     }
 
+    /** A win is recorded and shown on the result screen. A bust is not recorded and simply re-enables spinning. */
     fun onSpinFinished() {
         val plan = spinState.value.plan ?: return
         viewModelScope.launch {
-            val winner = prizeRepository.observePrizes().first().firstOrNull { it.id == plan.winnerPrizeId }
+            val winner = plan.winnerPrizeId?.let { id ->
+                prizeRepository.observePrizes().first().firstOrNull { it.id == id }
+            }
             if (winner != null) spinRecordRepository.recordSpin(winner)
             spinState.update {
                 it.copy(

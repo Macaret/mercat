@@ -10,6 +10,7 @@ fun MainButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    shine: (() -> Float)? = null,
 ) {
     GlossyPillButton(
         text = text,
@@ -17,5 +18,6 @@ fun MainButton(
         modifier = modifier,
         enabled = enabled,
         palette = RedPill,
+        shine = shine,
     )
 }

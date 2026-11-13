@@ -19,7 +19,6 @@ class HistoryScreenTest {
     val composeRule = createComposeRule()
 
     private val changes = mutableListOf<Pair<Long, Boolean>>()
-    private var backs = 0
 
     private val entries = listOf(
         HistoryEntry(2, "Hammer", "13 Nov 2026", "14:05:09", redeemed = false),
@@ -31,8 +30,7 @@ class HistoryScreenTest {
             ConstructionPrizeWheelTheme {
                 HistoryContent(
                     state = state,
-                    onRedeemedChange = { id, redeemed -> changes += id to redeemed },
-                    onBack = { backs++ }
+                    onRedeemedChange = { id, redeemed -> changes += id to redeemed }
                 )
             }
         }
@@ -50,15 +48,15 @@ class HistoryScreenTest {
     @Test
     fun summaryShowsTotalAndNotRedeemed() {
         show(HistoryUiState(loaded = true, entries = entries))
-        composeRule.onNodeWithTag(HistoryTestTags.SUMMARY).assertTextEquals("Total spins: 2  •  Not redeemed: 1")
+        composeRule.onNodeWithTag(HistoryTestTags.SUMMARY).assertTextEquals("Total rotiri: 2  •  Neridicate: 1")
     }
 
     @Test
     fun statusTextAndSwitchMatchTheRedemptionState() {
         show(HistoryUiState(loaded = true, entries = entries))
-        composeRule.onNodeWithTag(HistoryTestTags.status(2)).assertTextEquals("Not redeemed")
+        composeRule.onNodeWithTag(HistoryTestTags.status(2)).assertTextEquals("Neridicat")
         composeRule.onNodeWithTag(HistoryTestTags.redeemedSwitch(2)).assertIsOff()
-        composeRule.onNodeWithTag(HistoryTestTags.status(1)).assertTextEquals("Redeemed")
+        composeRule.onNodeWithTag(HistoryTestTags.status(1)).assertTextEquals("Ridicat")
         composeRule.onNodeWithTag(HistoryTestTags.redeemedSwitch(1)).assertIsOn()
     }
 
@@ -75,7 +73,7 @@ class HistoryScreenTest {
     fun emptyHistoryShowsAMessage() {
         show(HistoryUiState(loaded = true))
         composeRule.onNodeWithTag(HistoryTestTags.EMPTY).assertIsDisplayed()
-        composeRule.onNodeWithTag(HistoryTestTags.SUMMARY).assertTextEquals("Total spins: 0  •  Not redeemed: 0")
+        composeRule.onNodeWithTag(HistoryTestTags.SUMMARY).assertTextEquals("Total rotiri: 0  •  Neridicate: 0")
     }
 
     @Test
@@ -84,10 +82,4 @@ class HistoryScreenTest {
         composeRule.onNodeWithTag(HistoryTestTags.EMPTY).assertDoesNotExist()
     }
 
-    @Test
-    fun backButtonInvokesItsCallback() {
-        show(HistoryUiState(loaded = true, entries = entries))
-        composeRule.onNodeWithTag(HistoryTestTags.BACK).performClick()
-        assertEquals(1, backs)
-    }
 }

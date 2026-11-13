@@ -2,12 +2,20 @@ package com.smartcodeapps.constructionprizewheel.ui.wheel
 
 import com.smartcodeapps.constructionprizewheel.data.Branding
 import com.smartcodeapps.constructionprizewheel.domain.Prize
-import com.smartcodeapps.constructionprizewheel.domain.wheelPrizes
+import com.smartcodeapps.constructionprizewheel.domain.WheelSlot
+import com.smartcodeapps.constructionprizewheel.domain.wheelSlots
 
-data class WheelSegment(val prizeId: Long, val name: String, val imagePath: String?)
+/** A bust segment has no prize: [prizeId], [name] and [imagePath] are all null. */
+data class WheelSegment(val prizeId: Long?, val name: String?, val imagePath: String?) {
+    val isBust: Boolean get() = prizeId == null
+
+    companion object {
+        val Bust = WheelSegment(null, null, null)
+    }
+}
 
 /**
- * [busy] stays true from the tap until the customer dismisses the result screen.
+ * [busy] stays true from the tap until the customer dismisses the result screen, or until a bust lands.
  * [resultPrizeId] is set once the spin record is saved, and cleared when navigation to the result happens.
  */
 data class SpinState(
@@ -27,7 +35,6 @@ data class WheelUiState(
     val spinning: Boolean = false
 ) {
     val canSpin: Boolean get() = loaded && segments.isNotEmpty() && !spinning
-    val showNoPrizesMessage: Boolean get() = loaded && segments.isEmpty()
 }
 
 fun buildWheelUiState(
@@ -37,7 +44,12 @@ fun buildWheelUiState(
 ): WheelUiState = WheelUiState(
     loaded = true,
     branding = branding,
-    segments = prizes.wheelPrizes().map { WheelSegment(it.id, it.name, it.imagePath) },
+    segments = prizes.wheelSlots().map { slot ->
+        when (slot) {
+            is WheelSlot.PrizeSlot -> WheelSegment(slot.prize.id, slot.prize.name, slot.prize.imagePath)
+            WheelSlot.Bust -> WheelSegment.Bust
+        }
+    },
     restingRotation = spin.restingRotation,
     spinPlan = spin.plan,
     resultPrizeId = spin.resultPrizeId,

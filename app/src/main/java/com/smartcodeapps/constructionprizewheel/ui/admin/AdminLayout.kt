@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -44,9 +45,8 @@ object AdminLayoutTestTags {
     const val MENU_EXIT = "admin_menu_exit"
 }
 
-private val SidebarColor = Color(0xFF13233D)
-private val ContentPanelColor = Color(0xFFF4F7FB)
-private val MENU_WIDTH = 260.dp
+internal val SidebarColor = Color(0xFF13233D)
+internal val ContentPanelColor = Color(0xFFF1F2F5)
 private val MENU_BUTTON_HEIGHT = 64.dp
 
 /**
@@ -69,7 +69,7 @@ fun AdminLayout(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.width(MENU_WIDTH).fillMaxHeight()
+            modifier = Modifier.width(IntrinsicSize.Max).fillMaxHeight()
         ) {
             Image(
                 painter = painterResource(R.drawable.mercat_logo),
@@ -106,7 +106,7 @@ fun AdminLayout(
                 onClick = onExit,
                 palette = RedPill,
                 textSize = 18.sp,
-                modifier = Modifier.height(MENU_BUTTON_HEIGHT).testTag(AdminLayoutTestTags.MENU_EXIT)
+                modifier = Modifier.fillMaxWidth().height(MENU_BUTTON_HEIGHT).testTag(AdminLayoutTestTags.MENU_EXIT)
             )
         }
 
@@ -119,7 +119,7 @@ fun AdminLayout(
                 .fillMaxHeight()
                 .clip(RoundedCornerShape(24.dp))
                 .background(ContentPanelColor)
-                .padding(24.dp)
+                .padding(start = 16.dp, top = 16.dp, end = 16.dp)
         ) {
             content()
         }
@@ -133,7 +133,7 @@ private fun MenuItem(text: String, selected: Boolean, tag: String, onClick: () -
         onClick = onClick,
         palette = if (selected) BluePill else NavyPill,
         textSize = 18.sp,
-        modifier = Modifier.height(MENU_BUTTON_HEIGHT).testTag(tag)
+        modifier = Modifier.fillMaxWidth().height(MENU_BUTTON_HEIGHT).testTag(tag)
     )
 }
 

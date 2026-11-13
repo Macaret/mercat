@@ -2,7 +2,8 @@ package com.smartcodeapps.constructionprizewheel.ui.wheel
 
 import kotlin.random.Random
 
-data class SpinPlan(val winnerPrizeId: Long, val winnerIndex: Int, val targetRotation: Float)
+/** [winnerPrizeId] is null when the spin lands on a bust slot. [winnerIndex] is the slot index. */
+data class SpinPlan(val winnerPrizeId: Long?, val winnerIndex: Int, val targetRotation: Float)
 
 /** Rotation is in degrees clockwise. The pointer is fixed at the top, at wheel angle 0. */
 object SpinPlanner {

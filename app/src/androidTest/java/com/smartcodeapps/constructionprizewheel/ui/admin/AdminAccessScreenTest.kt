@@ -82,13 +82,13 @@ class AdminAccessScreenTest {
     @Test
     fun errorMessageIsShown() {
         show(AdminAccessUiState(mode = AdminAccessMode.LOGIN, error = AdminAccessError.INCORRECT_PIN))
-        composeRule.onNodeWithTag(AdminAccessTestTags.ERROR).assertTextEquals("Incorrect PIN")
+        composeRule.onNodeWithTag(AdminAccessTestTags.ERROR).assertTextEquals("PIN incorect")
     }
 
     @Test
     fun titleAndButtonFollowTheMode() {
         show(AdminAccessUiState(mode = AdminAccessMode.SETUP_ENTER, pin = "1"))
-        composeRule.onNodeWithTag(AdminAccessTestTags.TITLE).assertTextEquals("SET ADMINISTRATOR PIN")
+        composeRule.onNodeWithTag(AdminAccessTestTags.TITLE).assertTextEquals("SETEAZĂ PIN-UL DE ADMINISTRATOR")
         composeRule.onNodeWithTag(AdminAccessTestTags.SUBMIT).assertIsDisplayed()
     }
 }

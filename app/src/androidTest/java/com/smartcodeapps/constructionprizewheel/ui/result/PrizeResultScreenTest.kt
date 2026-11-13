@@ -2,6 +2,7 @@ package com.smartcodeapps.constructionprizewheel.ui.result
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -25,8 +26,7 @@ class PrizeResultScreenTest {
     fun showsCongratulationsTextAndPrizeDetails() {
         show(ResultUiState(loaded = true, prize = ResultPrize("Hammer", "Heavy duty", null)))
 
-        composeRule.onNodeWithText("CONGRATULATIONS!").assertIsDisplayed()
-        composeRule.onNodeWithText("YOU WON!").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Felicitări, ai câștigat un premiu!").assertIsDisplayed()
         composeRule.onNodeWithTag(ResultTestTags.PRIZE_NAME).assertIsDisplayed()
         composeRule.onNodeWithTag(ResultTestTags.PRIZE_DESCRIPTION).assertIsDisplayed()
     }
@@ -44,6 +44,21 @@ class PrizeResultScreenTest {
         var continued = 0
         show(ResultUiState(loaded = true, prize = ResultPrize("Gloves", null, null)), onContinue = { continued++ })
 
+        composeRule.onNodeWithTag(ResultTestTags.CONTINUE_BUTTON).performClick()
+        assertEquals(1, continued)
+    }
+
+    @Test
+    fun continueIgnoresTapsUntilTheEntryAnimationHasPlayed() {
+        var continued = 0
+        composeRule.mainClock.autoAdvance = false
+        show(ResultUiState(loaded = true, prize = ResultPrize("Gloves", null, null)), onContinue = { continued++ })
+
+        composeRule.mainClock.advanceTimeBy(500)
+        composeRule.onNodeWithTag(ResultTestTags.CONTINUE_BUTTON).performClick()
+        assertEquals(0, continued)
+
+        composeRule.mainClock.advanceTimeBy(2_000)
         composeRule.onNodeWithTag(ResultTestTags.CONTINUE_BUTTON).performClick()
         assertEquals(1, continued)
     }

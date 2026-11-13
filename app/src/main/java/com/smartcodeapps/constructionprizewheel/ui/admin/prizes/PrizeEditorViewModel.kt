@@ -9,6 +9,7 @@ import com.smartcodeapps.constructionprizewheel.data.image.ImageStore
 import com.smartcodeapps.constructionprizewheel.domain.ConfigError
 import com.smartcodeapps.constructionprizewheel.domain.Prize
 import com.smartcodeapps.constructionprizewheel.domain.PrizeDraft
+import com.smartcodeapps.constructionprizewheel.domain.WHEEL_SLOTS
 import com.smartcodeapps.constructionprizewheel.domain.forAdminList
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,7 +40,18 @@ data class PrizeEditorUiState(
     val canActivateMore: Boolean = true,
     val saving: Boolean = false,
     val pushedOutPrizeName: String? = null
-)
+) {
+    val bustSlots: Int get() = WHEEL_SLOTS - activeCount
+
+    /** Chance of landing on a bust; the bust slots share it equally. */
+    val bustProbability: Int get() = if (bustSlots > 0) (100 - activeProbabilityTotal).coerceAtLeast(0) else 0
+
+    val totalValid: Boolean
+        get() = activeProbabilityTotal <= 100 && (activeCount < WHEEL_SLOTS || activeProbabilityTotal == 100)
+
+    /** Valid, but the bust slots are drawn on the wheel with no chance of being landed on. */
+    val bustSlotsUnreachable: Boolean get() = bustSlots in 1 until WHEEL_SLOTS && activeProbabilityTotal == 100
+}
 
 private data class EditorState(
     val original: List<Prize>? = null,
@@ -87,6 +99,16 @@ class PrizeEditorViewModel @Inject constructor(
 
     fun updatePrize(id: Long, form: PrizeForm) =
         edit { it.update(id, form.name, form.description, form.imagePath, form.probability, form.active) }
+
+    /** Changes only the probability of one prize, e.g. from the inline field in the list. */
+    fun setProbability(id: Long, probability: Int) {
+        val prize = draftPrize(id) ?: return
+        if (prize.probability == probability) return
+        updatePrize(
+            id,
+            PrizeForm(prize.name, prize.description, prize.imagePath, probability, prize.active)
+        )
+    }
 
     fun deletePrize(id: Long) = edit { it.delete(id) }
 

@@ -57,13 +57,13 @@ class EditPrizeScreenTest {
     @Test
     fun titleDependsOnWhetherThePrizeIsNew() {
         show(isNew = true)
-        composeRule.onNodeWithTag(EditPrizeTestTags.TITLE).assertTextEquals("NEW PRIZE")
+        composeRule.onNodeWithTag(EditPrizeTestTags.TITLE).assertTextEquals("PREMIU NOU")
     }
 
     @Test
     fun titleForAnExistingPrize() {
         show(isNew = false, name = "Hammer")
-        composeRule.onNodeWithTag(EditPrizeTestTags.TITLE).assertTextEquals("EDIT PRIZE")
+        composeRule.onNodeWithTag(EditPrizeTestTags.TITLE).assertTextEquals("EDITARE PREMIU")
     }
 
     @Test
