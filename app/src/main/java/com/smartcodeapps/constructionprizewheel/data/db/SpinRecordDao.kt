@@ -14,9 +14,6 @@ interface SpinRecordDao {
     @Insert
     suspend fun insert(record: SpinRecordEntity): Long
 
-    @Query("UPDATE spin_records SET redemptionStatus = :status WHERE id = :id")
-    suspend fun setRedemptionStatus(id: Long, status: String)
-
     @Query("DELETE FROM spin_records")
     suspend fun deleteAll()
 }

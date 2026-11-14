@@ -2,10 +2,7 @@ package com.smartcodeapps.constructionprizewheel.ui.admin.history
 
 import app.cash.turbine.test
 import com.smartcodeapps.constructionprizewheel.data.SpinRecordRepository
-import com.smartcodeapps.constructionprizewheel.domain.RedemptionStatus
 import com.smartcodeapps.constructionprizewheel.domain.SpinRecord
-import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -17,7 +14,6 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -30,8 +26,8 @@ class HistoryViewModelTest {
 
     private val records = MutableStateFlow(
         listOf(
-            SpinRecord(2, Instant.parse("2026-11-13T12:00:00Z"), 10, "Hammer", RedemptionStatus.NOT_REDEEMED),
-            SpinRecord(1, Instant.parse("2026-11-13T10:00:00Z"), 20, "Gloves", RedemptionStatus.REDEEMED)
+            SpinRecord(2, Instant.parse("2026-11-13T12:00:00Z"), 10, "Hammer"),
+            SpinRecord(1, Instant.parse("2026-11-13T10:00:00Z"), 20, "Gloves")
         )
     )
     private val repository = mockk<SpinRecordRepository>()
@@ -41,7 +37,6 @@ class HistoryViewModelTest {
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         every { repository.observeHistory() } returns records
-        coEvery { repository.setRedemptionStatus(any(), any()) } returns Unit
     }
 
     @After
@@ -62,34 +57,12 @@ class HistoryViewModelTest {
     }
 
     @Test
-    fun `status reflects each record`() = runTest {
-        viewModel().uiState.test {
-            val state = expectMostRecentItem()
-            assertFalse(state.entries[0].redeemed)
-            assertTrue(state.entries[1].redeemed)
-            assertEquals(1, state.notRedeemedCount)
-        }
-    }
-
-    @Test
-    fun `switching on marks the record as redeemed`() = runTest {
-        viewModel().onRedeemedChange(2, true)
-        coVerify(exactly = 1) { repository.setRedemptionStatus(2, RedemptionStatus.REDEEMED) }
-    }
-
-    @Test
-    fun `switching off marks the record as not redeemed`() = runTest {
-        viewModel().onRedeemedChange(1, false)
-        coVerify(exactly = 1) { repository.setRedemptionStatus(1, RedemptionStatus.NOT_REDEEMED) }
-    }
-
-    @Test
     fun `new spins appear in the list as they are recorded`() = runTest {
         viewModel().uiState.test {
             assertEquals(2, expectMostRecentItem().totalCount)
 
             records.value = listOf(
-                SpinRecord(3, Instant.parse("2026-11-13T13:00:00Z"), 30, "Drill", RedemptionStatus.NOT_REDEEMED)
+                SpinRecord(3, Instant.parse("2026-11-13T13:00:00Z"), 30, "Drill")
             ) + records.value
 
             val state = expectMostRecentItem()

@@ -9,7 +9,6 @@ import com.smartcodeapps.constructionprizewheel.data.db.AppDatabase
 import com.smartcodeapps.constructionprizewheel.data.image.ImageStore
 import com.smartcodeapps.constructionprizewheel.domain.ConfigError
 import com.smartcodeapps.constructionprizewheel.domain.Prize
-import com.smartcodeapps.constructionprizewheel.domain.RedemptionStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -144,19 +143,6 @@ class RepositoriesTest {
         assertEquals(1, history.size)
         assertEquals("A", history.single().prizeName)
         assertEquals(winner.id, history.single().prizeId)
-    }
-
-    @Test
-    fun redemptionStatusCanBeToggledBothWays() = runBlocking {
-        prizes.saveAll(listOf(prize("A", 100)))
-        val id = spins.recordSpin(prizes.observePrizes().first().single())
-        assertEquals(RedemptionStatus.NOT_REDEEMED, spins.observeHistory().first().single().redemptionStatus)
-
-        spins.setRedemptionStatus(id, RedemptionStatus.REDEEMED)
-        assertEquals(RedemptionStatus.REDEEMED, spins.observeHistory().first().single().redemptionStatus)
-
-        spins.setRedemptionStatus(id, RedemptionStatus.NOT_REDEEMED)
-        assertEquals(RedemptionStatus.NOT_REDEEMED, spins.observeHistory().first().single().redemptionStatus)
     }
 
     @Test

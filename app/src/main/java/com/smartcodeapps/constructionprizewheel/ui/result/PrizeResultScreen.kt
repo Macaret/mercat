@@ -60,8 +60,8 @@ object ResultTestTags {
 }
 
 private val PRIZE_CIRCLE_SIZE = 255.dp
-/** transparent_logo.png is 626x342; at this height it is about 146dp wide. */
-private val LOGO_HEIGHT = 80.dp
+/** Same logo height as the main and PIN screens. transparent_logo.png is 626x342, so about 154dp wide. */
+private val LOGO_HEIGHT = 84.dp
 private val BANNER_MAX_WIDTH = 460.dp
 private val BANNER_TOP_GAP = 14.dp
 /**

@@ -138,7 +138,7 @@ private fun Logo(path: String?, modifier: Modifier = Modifier) {
         Image(bitmap = bitmap, contentDescription = null, contentScale = ContentScale.Fit, modifier = modifier)
     } else {
         Image(
-            painter = painterResource(R.drawable.mercat_logo),
+            painter = painterResource(R.drawable.transparent_logo),
             contentScale = ContentScale.Fit,
             contentDescription = null,
             modifier = modifier
@@ -160,7 +160,7 @@ private fun rememberSegmentImages(segments: List<WheelSegment>): Map<Long, Image
     return images
 }
 
-private val LOGO_HEIGHT = 110.dp
+private val LOGO_HEIGHT = 84.dp
 
 /** Matches the design image's proportions (711x186 at 320dp wide is ~84dp); never above 100dp. */
 private val SPIN_BUTTON_HEIGHT = 64.dp

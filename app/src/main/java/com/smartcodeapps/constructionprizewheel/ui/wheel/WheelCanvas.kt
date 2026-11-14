@@ -8,7 +8,7 @@ import com.smartcodeapps.constructionprizewheel.R
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,10 +35,10 @@ private val SegmentGradients = listOf(
 )
 private val BustGradient = listOf(Color(0xFF9E9E9E), Color(0xFF7A7A7A), Color(0xFF5E5E5E))
 private val SegmentColors = SegmentGradients.map { it[1] }
-private val RimColor = Color(0xFF3A3A3A)
-private val PointerColor = Color(0xFFC62828)
-private const val WHEEL_RADIUS_FRACTION = 0.94f
+private const val WHEEL_RADIUS_FRACTION = 0.92f
 private const val HUB_ICON_FRACTION = 0.28f
+private const val PIN_FRACTION = 0.2f
+private val PIN_RISE = 14.dp
 
 @Composable
 fun WheelCanvas(
@@ -102,8 +102,7 @@ fun WheelCanvas(
                         )
                     }
                 }
-                drawCircle(color = RimColor, radius = radius, center = center, style = Stroke(width = 10f))
-                drawCircle(color = RimColor, radius = radius * 0.08f, center = center)
+                drawCircle(color = Color(0xFF3A3A3A), radius = radius * 0.08f, center = center)
             }
         }
         Image(
@@ -112,20 +111,17 @@ fun WheelCanvas(
             contentScale = ContentScale.Fit,
             modifier = Modifier.align(Alignment.Center).fillMaxSize(HUB_ICON_FRACTION)
         )
-        Pointer(Modifier.align(Alignment.TopCenter))
-    }
-}
-
-@Composable
-private fun Pointer(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier.size(width = 44.dp, height = 52.dp)) {
-        val path = Path().apply {
-            moveTo(0f, 0f)
-            lineTo(size.width, 0f)
-            lineTo(size.width / 2f, size.height)
-            close()
-        }
-        drawPath(path, PointerColor)
-        drawPath(path, Color.White, style = Stroke(width = 4f))
+        Image(
+            painter = painterResource(R.drawable.wheel_border),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.fillMaxSize()
+        )
+        Image(
+            painter = painterResource(R.drawable.wheel_pin),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.align(Alignment.TopCenter).offset(y = (-PIN_RISE)).fillMaxSize(PIN_FRACTION)
+        )
     }
 }

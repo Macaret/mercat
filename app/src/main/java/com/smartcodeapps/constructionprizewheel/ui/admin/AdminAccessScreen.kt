@@ -73,7 +73,7 @@ private val KEY_SPACING = 12.dp
 private val MAX_KEY_SIZE = 68.dp
 private val MIN_KEY_SIZE = 44.dp
 /** Height reserved for logo, title, PIN, error, submit and back, so the keypad fits. */
-private val RESERVED_HEIGHT = 280.dp
+private val RESERVED_HEIGHT = 276.dp
 private const val KEYPAD_ROWS = 4
 
 fun pinDisplay(length: Int): String =
@@ -119,10 +119,10 @@ fun AdminAccessContent(
         )
         // Logo sits under the overlay, so it is dimmed like the background.
         Image(
-            painter = painterResource(R.drawable.mercat_logo),
+            painter = painterResource(R.drawable.transparent_logo),
             contentDescription = null,
             contentScale = ContentScale.Fit,
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 16.dp).height(72.dp)
+            modifier = Modifier.align(Alignment.TopCenter).height(84.dp)
         )
         Box(modifier = Modifier.fillMaxSize().background(ScreenOverlay))
 
@@ -135,7 +135,7 @@ fun AdminAccessContent(
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
             ) {
-                Spacer(Modifier.height(96.dp))
+                Spacer(Modifier.height(92.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     LockIcon(Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))

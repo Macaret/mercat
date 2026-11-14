@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.room.Room
 import com.smartcodeapps.constructionprizewheel.data.db.AppDatabase
+import com.smartcodeapps.constructionprizewheel.data.db.MIGRATION_1_2
 import com.smartcodeapps.constructionprizewheel.data.db.PrizeDao
 import com.smartcodeapps.constructionprizewheel.data.db.SpinRecordDao
 import dagger.Module
@@ -25,7 +26,9 @@ object DataModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
-        Room.databaseBuilder(context, AppDatabase::class.java, "prize_wheel.db").build()
+        Room.databaseBuilder(context, AppDatabase::class.java, "prize_wheel.db")
+            .addMigrations(MIGRATION_1_2)
+            .build()
 
     @Provides
     fun providePrizeDao(db: AppDatabase): PrizeDao = db.prizeDao()

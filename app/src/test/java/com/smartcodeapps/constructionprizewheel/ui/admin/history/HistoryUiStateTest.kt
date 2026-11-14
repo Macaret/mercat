@@ -1,6 +1,5 @@
 package com.smartcodeapps.constructionprizewheel.ui.admin.history
 
-import com.smartcodeapps.constructionprizewheel.domain.RedemptionStatus
 import com.smartcodeapps.constructionprizewheel.domain.SpinRecord
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -18,8 +17,8 @@ class HistoryUiStateTest {
         id: Long,
         at: String,
         name: String = "Hammer",
-        status: RedemptionStatus = RedemptionStatus.NOT_REDEEMED
-    ) = SpinRecord(id, Instant.parse(at), 10, name, status)
+        prizeId: Long = 10
+    ) = SpinRecord(id, Instant.parse(at), prizeId, name)
 
     @Test
     fun `date and time are formatted separately`() {
@@ -43,15 +42,6 @@ class HistoryUiStateTest {
     }
 
     @Test
-    fun `redemption status maps to a boolean`() {
-        assertFalse(record(1, "2026-11-13T10:00:00Z").toHistoryEntry(utc, Locale.ENGLISH).redeemed)
-        assertTrue(
-            record(2, "2026-11-13T10:00:00Z", status = RedemptionStatus.REDEEMED)
-                .toHistoryEntry(utc, Locale.ENGLISH).redeemed
-        )
-    }
-
-    @Test
     fun `entries keep the order of the records`() {
         val state = buildHistoryUiState(
             listOf(record(3, "2026-11-13T12:00:00Z"), record(2, "2026-11-13T11:00:00Z"), record(1, "2026-11-13T10:00:00Z")),
@@ -62,30 +52,68 @@ class HistoryUiStateTest {
     }
 
     @Test
-    fun `counts include total and not redeemed`() {
+    fun `count is the total number of records`() {
         val state = buildHistoryUiState(
             listOf(
                 record(1, "2026-11-13T10:00:00Z"),
-                record(2, "2026-11-13T11:00:00Z", status = RedemptionStatus.REDEEMED),
+                record(2, "2026-11-13T11:00:00Z"),
                 record(3, "2026-11-13T12:00:00Z")
             ),
             utc,
             Locale.ENGLISH
         )
         assertEquals(3, state.totalCount)
-        assertEquals(2, state.notRedeemedCount)
     }
 
     @Test
-    fun `an empty history is loaded with zero counts`() {
+    fun `an empty history is loaded with zero count`() {
         val state = buildHistoryUiState(emptyList(), utc, Locale.ENGLISH)
         assertTrue(state.loaded)
         assertEquals(0, state.totalCount)
-        assertEquals(0, state.notRedeemedCount)
     }
 
     @Test
     fun `initial state is not loaded`() {
         assertFalse(HistoryUiState().loaded)
+    }
+
+    @Test
+    fun `prize totals count wins per prize, most won first`() {
+        val totals = buildPrizeTotals(
+            listOf(
+                record(1, "2026-11-13T10:00:00Z", name = "Gloves", prizeId = 20),
+                record(2, "2026-11-13T11:00:00Z", name = "Hammer", prizeId = 10),
+                record(3, "2026-11-13T12:00:00Z", name = "Hammer", prizeId = 10),
+                record(4, "2026-11-13T13:00:00Z", name = "Hammer", prizeId = 10)
+            )
+        )
+        assertEquals(listOf(PrizeTotal(10, "Hammer", 3), PrizeTotal(20, "Gloves", 1)), totals)
+    }
+
+    @Test
+    fun `prize totals break ties by name`() {
+        val totals = buildPrizeTotals(
+            listOf(
+                record(1, "2026-11-13T10:00:00Z", name = "Zebra", prizeId = 1),
+                record(2, "2026-11-13T11:00:00Z", name = "Apple", prizeId = 2)
+            )
+        )
+        assertEquals(listOf("Apple", "Zebra"), totals.map { it.prizeName })
+    }
+
+    @Test
+    fun `a renamed prize is grouped by id and shows its latest name`() {
+        val totals = buildPrizeTotals(
+            listOf(
+                record(1, "2026-11-13T10:00:00Z", name = "Old name", prizeId = 5),
+                record(2, "2026-11-13T12:00:00Z", name = "New name", prizeId = 5)
+            )
+        )
+        assertEquals(listOf(PrizeTotal(5, "New name", 2)), totals)
+    }
+
+    @Test
+    fun `an empty history has no prize totals`() {
+        assertTrue(buildHistoryUiState(emptyList(), utc, Locale.ENGLISH).prizeTotals.isEmpty())
     }
 }

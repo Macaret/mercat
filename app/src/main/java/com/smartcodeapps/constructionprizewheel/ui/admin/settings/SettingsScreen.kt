@@ -162,8 +162,7 @@ fun SettingsContent(
             },
             text = { Text(stringResource(action.message)) },
             confirmButton = {
-                GlossyPillButton(
-                    text = stringResource(action.confirmLabel),
+                TextButton(
                     onClick = {
                         pending = null
                         when (action) {
@@ -171,10 +170,10 @@ fun SettingsContent(
                             ConfirmAction.RESTORE -> onRestore()
                         }
                     },
-                    palette = RedPill,
-                    textSize = 16.sp,
-                    modifier = Modifier.height(48.dp).testTag(SettingsTestTags.CONFIRM)
-                )
+                    modifier = Modifier.testTag(SettingsTestTags.CONFIRM)
+                ) {
+                    Text(stringResource(action.confirmLabel))
+                }
             },
             dismissButton = {
                 TextButton(onClick = { pending = null }, modifier = Modifier.testTag(SettingsTestTags.CANCEL_CONFIRM)) {

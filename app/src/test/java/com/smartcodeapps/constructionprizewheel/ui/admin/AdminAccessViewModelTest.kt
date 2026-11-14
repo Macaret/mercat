@@ -5,6 +5,7 @@ import com.smartcodeapps.constructionprizewheel.security.AdminAuthentication
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -39,6 +40,16 @@ class AdminAccessViewModelTest {
 
     private fun AdminAccessViewModel.type(pin: String) = pin.forEach { onDigit(it.digitToInt()) }
 
+    /**
+     * The fourth digit submits automatically, which clears the entry as soon as the check finishes.
+     * Holding the check open keeps the typed digits visible so they can be asserted on.
+     */
+    private fun holdVerification(): CompletableDeferred<Boolean> {
+        val gate = CompletableDeferred<Boolean>()
+        coEvery { auth.verify(any()) } coAnswers { gate.await() }
+        return gate
+    }
+
     @Test
     fun `existing pin starts in login mode`() {
         assertEquals(AdminAccessMode.LOGIN, AdminAccessViewModel(auth, SavedStateHandle()).uiState.value.mode)
@@ -52,16 +63,31 @@ class AdminAccessViewModelTest {
 
     @Test
     fun `digits are collected up to four and extra digits are ignored`() {
+        holdVerification()
         val vm = AdminAccessViewModel(auth, SavedStateHandle())
         vm.type("12345678")
         assertEquals("1234", vm.uiState.value.pin)
+        coVerify(exactly = 1) { auth.verify(any()) }
     }
 
     @Test
     fun `zero can be entered like any other digit`() {
+        holdVerification()
         val vm = AdminAccessViewModel(auth, SavedStateHandle())
         vm.type("0100")
         assertEquals("0100", vm.uiState.value.pin)
+    }
+
+    @Test
+    fun `the fourth digit submits the pin without a separate confirm`() {
+        val vm = AdminAccessViewModel(auth, SavedStateHandle())
+        vm.type("123")
+        coVerify(exactly = 0) { auth.verify(any()) }
+
+        vm.type("4")
+
+        coVerify(exactly = 1) { auth.verify("1234") }
+        assertTrue(vm.uiState.value.authenticated)
     }
 
     @Test
@@ -92,6 +118,7 @@ class AdminAccessViewModelTest {
 
     @Test
     fun `submit is enabled only once four digits are entered`() {
+        holdVerification()
         val vm = AdminAccessViewModel(auth, SavedStateHandle())
         assertFalse(vm.uiState.value.canSubmit)
         vm.type("123")

@@ -259,8 +259,22 @@ class PrizeEditorViewModelTest {
         val vm = viewModel()
         vm.deletePrize(2)
         vm.save()
-        vm.rearrange(listOf(1L))
+        assertTrue(vm.uiState.value.errors.isNotEmpty())
+
+        // Putting Drill on the wheel is a real change, so the old errors no longer apply.
+        vm.rearrange(listOf(1L, 3L))
         assertTrue(vm.uiState.value.errors.isEmpty())
+    }
+
+    @Test
+    fun `a rearrange that changes nothing keeps the save errors`() = runTest {
+        coEvery { repository.saveAll(any()) } returns SaveResult.Invalid(listOf(ConfigError.ProbabilityTotalOver100(160)))
+        val vm = viewModel()
+        vm.deletePrize(2)
+        vm.save()
+
+        vm.rearrange(listOf(1L))
+        assertTrue(vm.uiState.value.errors.isNotEmpty())
     }
 
     @Test

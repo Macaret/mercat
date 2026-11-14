@@ -10,7 +10,7 @@
     <string name="next_button">ÎNAINTE</string>
     <string name="save_pin_button">SALVEAZĂ PIN-UL</string>
     <string name="cancel_button">ANULEAZĂ</string>
-    <string name="delete_key">ȘTERGE</string>
+    <string name="delete_key">DEL</string>
     <string name="error_incorrect_pin">PIN incorect</string>
     <string name="error_invalid_pin_length">PIN-ul trebuie să aibă 4 cifre</string>
     <string name="error_pin_mismatch">PIN-urile nu se potrivesc. Încearcă din nou.</string>
@@ -45,11 +45,11 @@
     <string name="msg_history_reset">Istoricul rotirilor a fost șters.</string>
 
     <string name="history_title">ISTORIC ROTIRI</string>
-    <string name="history_summary">Total rotiri: %1$d  •  Neridicate: %2$d</string>
+    <string name="history_summary">Total rotiri: %1$d</string>
+    <string name="history_tab_timeline">Cronologie</string>
+    <string name="history_tab_by_prize">Pe premii</string>
     <string name="history_empty">Nu există încă nicio rotire.</string>
     <string name="history_date_time">%1$s  •  %2$s</string>
-    <string name="status_redeemed">Ridicat</string>
-    <string name="status_not_redeemed">Neridicat</string>
 
     <string name="prizes_title">PREMII</string>
     <string name="back_button">ÎNAPOI</string>
