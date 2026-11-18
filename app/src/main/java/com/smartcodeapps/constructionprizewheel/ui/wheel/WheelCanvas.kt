@@ -2,6 +2,7 @@ package com.smartcodeapps.constructionprizewheel.ui.wheel
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.layout.ContentScale
 import com.smartcodeapps.constructionprizewheel.R
@@ -34,6 +35,9 @@ private val SegmentGradients = listOf(
     listOf(Color(0xFF22B53A), Color(0xFF13972B), Color(0xFF0B7A20)), // green
 )
 private val BustGradient = listOf(Color(0xFF9E9E9E), Color(0xFF7A7A7A), Color(0xFF5E5E5E))
+private val BustIconBackdrop = Color(0xFF4A4A4A)
+/** Size of every circle (prize photos and bust icon) relative to its slice, so it sits with padding inside it. */
+private const val IMAGE_CIRCLE_SCALE = 0.8f
 private val SegmentColors = SegmentGradients.map { it[1] }
 private const val WHEEL_RADIUS_FRACTION = 0.92f
 private const val HUB_ICON_FRACTION = 0.28f
@@ -47,6 +51,7 @@ fun WheelCanvas(
     rotationDegrees: () -> Float,
     modifier: Modifier = Modifier
 ) {
+    val bustImage = ImageBitmap.imageResource(R.drawable.bust_icon)
     Box(modifier = modifier.aspectRatio(1f)) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val radius = size.minDimension / 2f * WHEEL_RADIUS_FRACTION
@@ -81,15 +86,29 @@ fun WheelCanvas(
                     }
                 }
                 segments.forEachIndexed { index, segment ->
-                    val image = segment.prizeId?.let { images[it] } ?: return@forEachIndexed
-                    val side = WheelGeometry.imageSize(radius, count)
+                    val image = (if (segment.isBust) bustImage else segment.prizeId?.let { images[it] })
+                        ?: return@forEachIndexed
+                    // Circles are scaled down, leaving a gap between them and the edges of their slice.
+                    val side = WheelGeometry.imageSize(radius, count) * IMAGE_CIRCLE_SCALE
                     val distance = radius * WheelGeometry.IMAGE_DISTANCE
                     rotate(degrees = WheelGeometry.segmentCenter(index, count), pivot = center) {
                         val topLeft = Offset(center.x - side / 2f, center.y - distance - side / 2f)
                         val clip = Path().apply { addOval(Rect(topLeft, Size(side, side))) }
                         clipPath(clip) {
+                            if (segment.isBust) {
+                                // The icon is transparent, so give it a round backdrop like a prize photo.
+                                drawCircle(
+                                    color = BustIconBackdrop,
+                                    radius = side / 2f,
+                                    center = Offset(center.x, center.y - distance)
+                                )
+                            }
+                            // Crop to a centered square so non-square images are not stretched.
+                            val srcSide = minOf(image.width, image.height)
                             drawImage(
                                 image = image,
+                                srcOffset = IntOffset((image.width - srcSide) / 2, (image.height - srcSide) / 2),
+                                srcSize = IntSize(srcSide, srcSide),
                                 dstOffset = IntOffset(topLeft.x.roundToInt(), topLeft.y.roundToInt()),
                                 dstSize = IntSize(side.roundToInt(), side.roundToInt())
                             )
